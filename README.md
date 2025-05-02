@@ -11,4 +11,6 @@ This was done with the interview requirements:
 - External sort (with MinHeap)
 
 ## References
+- https://opendsa-server.cs.vt.edu/ODSA/Books/CS3/html/ExternalSort.html
+- https://www.youtube.com/watch?v=97kdv5rGa8U&t=589s
 - https://en.wikipedia.org/wiki/External_sorting
