@@ -8,7 +8,8 @@ This was done with the interview requirements:
 
 ## Algorithms
 - Brute force
-- External sort (with MinHeap)
+- External sort (originally with Lose Tree but changed to use a min heap)
+> NOTE: The MinHeap is unoptimized. Still the algorithm is muuuuuuuch faster
 
 ## References
 - https://opendsa-server.cs.vt.edu/ODSA/Books/CS3/html/ExternalSort.html
