@@ -6,6 +6,8 @@ This was done with the interview requirements:
 - No external libs
 - No LLMs
 
+I've also added some fairly large files to test performance on both algorithms
+
 ## Algorithms
 - Brute force
 - External sort (originally with Lose Tree but changed to use a min heap)
