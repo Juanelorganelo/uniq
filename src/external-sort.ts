@@ -75,7 +75,6 @@ async function uniq<S extends { write: fs.WriteStream["write"] }>(
       return 1;
     }
   });
-  const output = process.stdout;
 
   const readers = files.map((file) =>
     readline.createInterface({
@@ -102,7 +101,7 @@ async function uniq<S extends { write: fs.WriteStream["write"] }>(
 
     // This ensure's deduplication
     if (line !== lastUniqueLine) {
-      output.write(line + EOL);
+      writeStream.write(line + EOL);
       lastUniqueLine = line;
     }
 
@@ -159,6 +158,10 @@ const main = async () => {
   const testFile = path.join(testDir, inputFile);
 
   const start = performance.now();
+
+  if (outputFile && !fs.existsSync(outputFile)) {
+    await fs.promises.open(outputFile, 'w')
+  }
 
   await uniq(
     testFile,
