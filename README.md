@@ -8,6 +8,9 @@ This was done with the interview requirements:
 
 I've also added some fairly large files to test performance on both algorithms
 
+## Running
+For the brute force version `pnpm run:naive` and for the external sorting version do `pnpm run:external-sort`
+
 ## Algorithms
 - Brute force
 - External sort (originally with Lose Tree but changed to use a min heap)
