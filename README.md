@@ -14,6 +14,9 @@ For the brute force version `pnpm run:naive` and for the external sorting versio
 ## Algorithms
 - Brute force
 - External sort (originally with Lose Tree but changed to use a min heap)
+  Key is to dump chunks into separate files so we can load them concurrently and merge them with k-ways (previous version couldn't handle that since you need to keep the file sorted which is more difficult for a single file since you have to compare what you're adding with what's already stored) this is IMO the differentiator.
+
+  The use of a MinHeap for sorting is clever, though any data structures with a similar invariant would do (such as a Loser Tree)
 > NOTE: The MinHeap is unoptimized. Still the algorithm is muuuuuuuch faster
 
 ## References

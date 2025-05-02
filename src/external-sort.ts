@@ -9,6 +9,8 @@ const CHUNK_SIZE = 5000;
 
 type Ordering = 1 | -1 | 0;
 
+// This is usually implemented with a binary tree but for simplicity
+// I just did an array impl that maintains the heap invariant
 function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   const heap: T[] = [];
 

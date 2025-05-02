@@ -63,7 +63,9 @@ const main = async () => {
     using lines = await makeStore(10)
 
     const start = performance.now()
-    for await (const line of uniq(testFile, lines)) {}
+    for await (const line of uniq(testFile, lines)) {
+        console.log(line)
+    }
     const end = performance.now()
     const elapsedTime = end - start
 
