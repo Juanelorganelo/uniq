@@ -6,7 +6,9 @@ This was done with the interview requirements:
 - No external libs
 - No LLMs
 
-## Architecture
+## Algorithms
+- Brute force
+- External sort (with MinHeap)
 
-
-## Benchmarks
+## References
+- https://en.wikipedia.org/wiki/External_sorting

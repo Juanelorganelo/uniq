@@ -140,7 +140,7 @@ async function writeChunk(chunk: Set<string>) {
 function usage() {
   return [
     "external-sort.ts <input_file> [output_file]",
-    "deduplicates the input file using k-ways merging",
+    "deduplicates the input file using external sorting",
   ].join("\n");
 }
 
