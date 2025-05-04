@@ -1,8 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import readline from 'readline'
-import { fileURLToPath } from 'url'
-import { formatElapsedTime, Line, readLines, shortId } from './utils.js'
+import { formatElapsedTime, Line, readLines, shortId } from './utils'
 
 const makeStore = async (capacity: number) => {
     let buffer = new Set()
@@ -57,7 +56,7 @@ async function* uniq(file: string, lineSet: Awaited<ReturnType<typeof makeStore>
 }
 
 const main = async () => {
-    const dirname = path.dirname(fileURLToPath(import.meta.url))
+    const dirname = __dirname;
     const testDir = path.join(dirname, 'test-files')
     const testFile = path.join(testDir, 'all-unique.csv')
     using lines = await makeStore(10)

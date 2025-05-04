@@ -2,29 +2,46 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
-import { formatElapsedTime, shortId } from "./utils.js";
-import { fileURLToPath } from "node:url";
+import { formatElapsedTime, shortId } from "./utils";
+import { Writable } from "node:stream";
 
 const CHUNK_SIZE = 5000;
 
-type Ordering = 1 | -1 | 0;
+export type Ordering = 1 | -1 | 0;
+export const createOrdering = (value: number): Ordering => {
+  switch (value) {
+    case 1:
+    case 0:
+    case -1:
+      return value as Ordering;
+    default:
+      throw new Error(
+        `Attempted to create an Ordering with invalid value ${value}`
+      );
+  }
+};
 
 // This is usually implemented with a binary tree but for simplicity
 // I just did an array impl that maintains the heap invariant
-function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
+export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   const heap: T[] = [];
 
   const push = (value: T) => {
-    const elem = heap.pop();
-    if (elem) {
-      if (elem < value) {
-        heap.push(value);
-      } else {
-        const index = heap.findIndex((x) => compare(x, value) === 1);
-        heap.splice(index, 0, value);
-      }
-    } else {
+    const elem = heap[heap.length - 1];
+
+    if (!elem || elem < value) {
       heap.push(value);
+    } else {
+      for (let i = 0; i < heap.length; i++) {
+        const ordering = compare(heap[i], value);
+        if (ordering === 1) {
+          heap.splice(i, 0, value);
+          return;
+        }
+      }
+
+      // There wasn't a bigger element so we just add to the beginning.
+      heap.unshift(value);
     }
   };
 
@@ -35,18 +52,36 @@ function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   return {
     pop,
     push,
+    getHeap() {
+      return heap
+    },
     get size() {
       return heap.length;
     },
   };
 }
 
-async function uniq<S extends { write: fs.WriteStream["write"] }>(
+interface FileLine {
+  line: string;
+  fileIndex: number;
+}
+
+const defaultCompare = (left: FileLine, right: FileLine): Ordering => {
+  if (left.line === right.line) {
+    return 0;
+  } else if (left.line < right.line) {
+    return -1;
+  } else {
+    return 1;
+  }
+};
+
+async function uniq<S extends Writable>(
   file: string,
-  writeStream: S
+  output: S,
+  compare: (a: FileLine, b: FileLine) => Ordering = defaultCompare
 ) {
-  const rs = fs.createReadStream(file);
-  const lines = readline.createInterface(rs);
+  const lines = readline.createInterface(fs.createReadStream(file));
   const chunk = new Set<string>();
   const files = [];
 
@@ -59,33 +94,20 @@ async function uniq<S extends { write: fs.WriteStream["write"] }>(
     }
   }
 
+  // Writes the last (maybe incomplete) chunk to the file system.
   if (chunk.size > 0) {
     files.push(await writeChunk(chunk));
   }
 
-  interface FileLine {
-    line: string;
-    fileIndex: number;
-  }
-
-  const heap = createMinHeap<FileLine>((left, right) => {
-    if (left.line === right.line) {
-      return 0;
-    } else if (left.line < right.line) {
-      return -1;
-    } else {
-      return 1;
-    }
-  });
+  const heap = createMinHeap<FileLine>(compare);
 
   const readers = files.map((file) =>
     readline.createInterface({
       input: fs.createReadStream(file),
-      crlfDelay: Infinity,
     })
   );
 
-  for (let i = 0; i < files.length; i++) {
+  for (let i = 0; i < readers.length; i++) {
     const file = readers[i];
     const line = await getNextLine(file);
     if (line) {
@@ -99,22 +121,20 @@ async function uniq<S extends { write: fs.WriteStream["write"] }>(
   let lastUniqueLine = null;
   while (heap.size > 0) {
     const { line, fileIndex } = heap.pop()!;
-    const file = readers[fileIndex];
 
     // This ensure's deduplication
     if (line !== lastUniqueLine) {
-      writeStream.write(line + EOL);
+      output.write(line + EOL);
       lastUniqueLine = line;
     }
 
+    const file = readers[fileIndex];
     const nextLine = await getNextLine(file);
     if (nextLine) {
       heap.push({ line: nextLine, fileIndex });
     }
   }
 
-  // Flush the output stream and close readers
-  // output.end()
   for (const reader of readers) {
     reader.close();
   }
@@ -139,38 +159,56 @@ async function writeChunk(chunk: Set<string>) {
   return tmpFile;
 }
 
-function usage() {
-  return [
-    "external-sort.ts <input_file> [output_file]",
-    "deduplicates the input file using external sorting",
-  ].join("\n");
-}
+const recordId = (record: string) => {
+  const cells = record.split(",");
+  return parseInt(cells[0], 10);
+};
 
-const main = async () => {
-  const dirname = path.dirname(fileURLToPath(import.meta.url));
-  const testDir = path.join(dirname, "test-files");
+const compareLines = (a: FileLine, b: FileLine) => {
+  if (a < b) return -1;
+  else if (a > b) return 1;
+  else return 0;
+};
 
-  const [, , inputFile, outputFile] = process.argv;
-  if (!inputFile) {
-    console.error("Missing input file\n")
-    console.error(usage())
-    process.exit(1)
+const compareRecordIds = (a: FileLine, b: FileLine) =>
+  Math.max(1, Math.min(-1, recordId(b.line) - recordId(a.line))) as Ordering;
+
+const getCompare = (file: string) => {
+  switch (path.extname(file)) {
+    case ".csv":
+      return compareRecordIds
+    default:
+      return compareLines
   }
+};
+
+export const main = async (argv: string[]) => {
+  const dirname = __dirname;
+  const testDir = path.join(dirname, "test-files");
+  const inputFile = "repetition-heavy.csv";
+  const outputFile = "unique.txt";
 
   const testFile = path.join(testDir, inputFile);
+  const outputStream = fs.createWriteStream(testFile, { encoding: 'utf8' })
 
   const start = performance.now();
 
   if (outputFile && !fs.existsSync(outputFile)) {
-    await fs.promises.open(outputFile, 'w')
+    await fs.promises.open(outputFile, "w");
   }
 
   await uniq(
     testFile,
-    outputFile ? fs.createWriteStream(outputFile) : process.stdout
+    process.stdout,
+    getCompare(inputFile)
   );
+
+  outputStream.close()
   const end = performance.now();
   const elapsedTime = end - start;
   console.log("Entire process took %s", formatElapsedTime(elapsedTime));
 };
-main();
+
+if (require.main === module) {
+  main(process.argv.slice(2));
+}

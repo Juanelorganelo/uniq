@@ -3,10 +3,10 @@ export default {
   testEnvironment: "node",
   transform: {
     "^.+\.tsx?$": ["ts-jest",{
-      tsconfig: true
+      tsconfig: true,
     }],
   },
   moduleNameMapper: {
-    '^(?:.\\/)*src\\/..*\\.js$': '$0.ts'
+    '^(?:.\\/)*src\\/..*\\.js$': '$0'
   }
 };

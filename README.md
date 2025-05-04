@@ -1,5 +1,5 @@
 # Uniq
-This is a fully-fleged version of an interview exercise I made for Vanta.
+This is a fully-fleged version of an interview exercise I made for a company.
 The exercise consist of recreating the default functionality of the Linux command `uniq`, with the caveat that this utility should work even on unsorted files.
 
 This was done with the interview requirements:
@@ -15,8 +15,6 @@ For the brute force version `pnpm run:naive` and for the external sorting versio
 - Brute force
 - External sort (originally with Lose Tree but changed to use a min heap)
   Key is to dump chunks into separate files so we can load them concurrently and merge them with k-ways (previous version couldn't handle that since you need to keep the file sorted which is more difficult for a single file since you have to compare what you're adding with what's already stored) this is IMO the differentiator.
-
-  The use of a MinHeap for sorting is clever, though any data structures with a similar invariant would do (such as a Loser Tree)
 > NOTE: The MinHeap is unoptimized. Still the algorithm is muuuuuuuch faster
 
 ## References
