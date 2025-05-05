@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
+import { Readable, Writable } from "node:stream";
 import { formatElapsedTime, shortId } from "./utils";
-import { Writable } from "node:stream";
 
 const CHUNK_SIZE = 5000;
 
@@ -76,12 +76,12 @@ const defaultCompare = (left: FileLine, right: FileLine): Ordering => {
   }
 };
 
-async function uniq<S extends Writable>(
-  file: string,
+async function uniq<I extends Readable, S extends Writable>(
+  input: I,
   output: S,
   compare: (a: FileLine, b: FileLine) => Ordering = defaultCompare
 ) {
-  const lines = readline.createInterface(fs.createReadStream(file));
+  const lines = readline.createInterface({ input });
   const chunk = new Set<string>();
   const files = [];
 
@@ -154,7 +154,7 @@ async function getNextLine(rl: readline.Interface) {
 
 async function writeChunk(chunk: Set<string>) {
   const values = Array.from(chunk).sort();
-  const tmpFile = path.join(tmpdir(), `dedupe-chunk-${shortId()}.txt`);
+  const tmpFile = path.join(tmpdir(), `chunk-${shortId()}.txt`);
   await fs.promises.writeFile(tmpFile, "\n" + values.join("\n"), "utf-8");
   return tmpFile;
 }
@@ -189,7 +189,8 @@ export const main = async (argv: string[]) => {
   const outputFile = "unique.txt";
 
   const testFile = path.join(testDir, inputFile);
-  const outputStream = fs.createWriteStream(testFile, { encoding: 'utf8' })
+  const inputStream = fs.createReadStream(testFile, { encoding: 'utf8' })
+  const outputStream = fs.createWriteStream(outputFile, { encoding: 'utf8' })
 
   const start = performance.now();
 
@@ -198,12 +199,12 @@ export const main = async (argv: string[]) => {
   }
 
   await uniq(
-    testFile,
-    process.stdout,
+    inputStream,
+    outputStream,
     getCompare(inputFile)
   );
 
-  outputStream.close()
+  outputStream.close();
   const end = performance.now();
   const elapsedTime = end - start;
   console.log("Entire process took %s", formatElapsedTime(elapsedTime));
