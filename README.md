@@ -1,6 +1,6 @@
 # Uniq
 This is a fully-fleged version of an interview exercise I made for a company.
-The exercise consist of recreating the default functionality of the Linux command `uniq`, with the caveat that this utility should work even on unsorted files.
+The exercise consist of recreating the default functionality of the Linux command `uniq`, with the caveat that this utility should work even on unsorted files. Please, bear in mind this is done in a "as-i-have-time" basis since it's unpaid work.
 
 This was done with the interview requirements:
 - No external libs
