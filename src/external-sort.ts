@@ -4,6 +4,7 @@ import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
 import { Readable, Writable } from "node:stream";
 import { formatElapsedTime, shortId } from "./utils";
+import { getScriptName, parseArgv } from "./cli";
 
 const CHUNK_SIZE = 5000;
 
@@ -192,14 +193,12 @@ const getCompare = (file: string) => {
 };
 
 export const main = async (argv: string[]) => {
-  const dirname = __dirname;
-  const testDir = path.join(dirname, "test-files");
-  const inputFile = "all-unique.csv";
-  const outputFile = "unique.out.txt";
+  const { inputFile, outputFile } = parseArgv(argv, getScriptName(__filename));
 
-  const testFile = path.join(testDir, inputFile);
-  const inputStream = fs.createReadStream(testFile, { encoding: "utf8" });
-  const outputStream = fs.createWriteStream(outputFile, { encoding: "utf8" });
+  const inputStream = fs.createReadStream(inputFile, { encoding: "utf8" });
+  const outputStream = outputFile
+    ? fs.createWriteStream(outputFile, { encoding: "utf8" })
+    : process.stdout;
 
   const start = performance.now();
 

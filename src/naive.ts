@@ -1,12 +1,14 @@
 import fs from 'fs'
 import path from 'path'
 import readline from 'readline'
-import { tmpdir } from 'os'
+import { EOL, tmpdir } from 'os'
+import { Writable } from 'stream'
+import { getScriptName, parseArgv } from './cli'
 import { formatElapsedTime, Line, readLines, shortId } from './utils'
 
 const makeStore = async (capacity: number) => {
     let buffer = new Set()
-    const fileName = path.join(tmpdir(), `${shortId()}.nlines.txt`)
+    const fileName = path.join(tmpdir(), `${shortId()}-store.txt`)
 
     if (!fs.existsSync(fileName)) {
         await fs.promises.writeFile(fileName, '')
@@ -56,20 +58,18 @@ async function* uniq(file: string, lineSet: Awaited<ReturnType<typeof makeStore>
     }
 }
 
-const main = async () => {
-    const dirname = __dirname;
-    const testDir = path.join(dirname, 'test-files')
-    const testFile = path.join(testDir, 'all-unique.csv')
+const main = async (argv: string[]) => {
+    const { inputFile, outputFile } = parseArgv(argv, getScriptName(__filename))
     using lines = await makeStore(10)
 
+    const output: Writable = outputFile ? fs.createWriteStream(outputFile) : process.stdout;
+
     const start = performance.now()
-    for await (const line of uniq(testFile, lines)) {
-        console.log(line)
+    for await (const line of uniq(inputFile, lines)) {
+        output.write(line + EOL)
     }
     const end = performance.now()
     const elapsedTime = end - start
-
-
     console.log('Entire process took', formatElapsedTime(elapsedTime))
 }
-main();
+main(process.argv.slice(2));

@@ -4,6 +4,7 @@
         "esModuleInterop": true,
         // Avoid issues with ts-jest
         "module": "CommonJS",
-        "target": "ES2015"
+        "target": "ES2015",
+        "allowUnreachableCode": false
     }
 }
