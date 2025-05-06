@@ -14,7 +14,7 @@ export interface PrintErrorOptions {
 
 const Colors = {
   red: "\u001b[31m",
-  green: "\u001b[32m",
+  magenta: "\u001b[35m",
   cyan: "\u001b[36m",
   reset: "\u001b[0m",
 } as const;
@@ -39,8 +39,18 @@ export function printErrorMessage(
   usage(scriptName);
 }
 
-function info(message: string) {
+export function info(message: string) {
   return console.log(colorize(message, "cyan"));
+}
+
+function isDebug() {
+  return process.env.DEBUG === 'true';
+}
+
+export function debug(message: string) {
+  if (isDebug()) {
+    console.log(colorize(message, "magenta"))
+  }
 }
 
 const parseInputFile = (inputFile: string, scriptName: ScriptName) => {

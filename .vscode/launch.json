@@ -9,7 +9,7 @@
             "type": "node-terminal",
             "name": "Ejecutar el script: run:external-sort",
             "request": "launch",
-            "command": "pnpm run run:external-sort src/test-files/all-unique.csv unique.out.txt",
+            "command": "pnpm run run:external-sort src/test-files/all-unique.csv --output-file unique.out.txt",
             "cwd": "${workspaceFolder}"
         }
     ]
