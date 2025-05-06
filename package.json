@@ -1,7 +1,6 @@
 {
 	"scripts": {
 		"test": "jest",
-		"run:it": "tsx src/it.ts",
 		"run:naive": "tsx src/naive.ts",
 		"run:external-sort": "tsx src/external-sort.ts"
 	},
