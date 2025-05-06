@@ -29,7 +29,7 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   const push = (value: T) => {
     const elem = heap[heap.length - 1];
 
-    if (!elem || elem < value) {
+    if (!elem || compare(elem, value) === -1) {
       heap.push(value);
     } else {
       for (let i = 0; i < heap.length; i++) {
@@ -122,7 +122,6 @@ async function uniq<I extends Readable, S extends Writable>(
   let lastUniqueLine = null;
   while (heap.size > 0) {
     const { line, fileIndex } = heap.pop()!;
-    const heapMem = heap.getHeap()
 
     // This ensure's deduplication
     if (line !== lastUniqueLine) {
@@ -156,7 +155,7 @@ async function getNextLine(rl: readline.Interface) {
 
 async function writeChunk(chunk: Set<string>, compare: Compare) {
   const values = Array.from(chunk).sort(compare);
-  const tmpFile = path.join(__dirname, `chunk-${shortId()}.txt`);
+  const tmpFile = path.join(tmpdir(), `chunk-${shortId()}.txt`);
   await fs.promises.writeFile(tmpFile, values.join(EOL) + EOL, "utf-8");
   return tmpFile;
 }
