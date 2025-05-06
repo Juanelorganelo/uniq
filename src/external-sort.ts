@@ -4,7 +4,7 @@ import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
 import { Readable, Writable } from "node:stream";
 import { formatElapsedTime, shortId } from "./utils";
-import { getScriptName, parseArgv } from "./cli";
+import { debug, getScriptName, parseArgv } from "./cli";
 
 const CHUNK_SIZE = 5000;
 
@@ -155,6 +155,7 @@ async function writeChunk(chunk: Set<string>, compare: Compare) {
   const values = Array.from(chunk).sort(compare);
   const tmpFile = path.join(tmpdir(), `chunk-${shortId()}.txt`);
   await fs.promises.writeFile(tmpFile, values.join(EOL) + EOL, "utf-8");
+  debug(`chunk: ${tmpFile}`);
   return tmpFile;
 }
 
