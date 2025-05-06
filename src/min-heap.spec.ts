@@ -11,7 +11,7 @@ function compareNumber(a: number, b: number) {
  * This guards against regressions when optimizing
  */
 describe("createMinHeap", () => {
-  test("construct s without errors", () => {
+  test("constructs without errors", () => {
     expect(() => createMinHeap<number>(compareNumber)).not.toThrow();
   });
 

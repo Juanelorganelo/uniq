@@ -145,3 +145,5 @@ dist
 
 *.lines.txt
 *.nlines.txt
+
+*.out.txt

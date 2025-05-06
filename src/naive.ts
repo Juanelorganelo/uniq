@@ -1,11 +1,12 @@
 import fs from 'fs'
 import path from 'path'
 import readline from 'readline'
+import { tmpdir } from 'os'
 import { formatElapsedTime, Line, readLines, shortId } from './utils'
 
 const makeStore = async (capacity: number) => {
     let buffer = new Set()
-    const fileName = `${shortId()}.nlines.txt`
+    const fileName = path.join(tmpdir(), `${shortId()}.nlines.txt`)
 
     if (!fs.existsSync(fileName)) {
         await fs.promises.writeFile(fileName, '')

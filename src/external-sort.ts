@@ -66,10 +66,11 @@ interface FileLine {
   fileIndex: number;
 }
 
-const defaultCompare = (left: FileLine, right: FileLine): Ordering => {
-  if (left.line === right.line) {
+type Compare = (left: string, right: string) => Ordering;
+const defaultCompare: Compare = (left, right) => {
+  if (left === right) {
     return 0;
-  } else if (left.line < right.line) {
+  } else if (left < right) {
     return -1;
   } else {
     return 1;
@@ -79,7 +80,7 @@ const defaultCompare = (left: FileLine, right: FileLine): Ordering => {
 async function uniq<I extends Readable, S extends Writable>(
   input: I,
   output: S,
-  compare: (a: FileLine, b: FileLine) => Ordering = defaultCompare
+  compare: Compare = defaultCompare
 ) {
   const lines = readline.createInterface({ input });
   const chunk = new Set<string>();
@@ -89,17 +90,17 @@ async function uniq<I extends Readable, S extends Writable>(
     chunk.add(line);
 
     if (chunk.size >= CHUNK_SIZE) {
-      files.push(await writeChunk(chunk));
+      files.push(await writeChunk(chunk, compare));
       chunk.clear();
     }
   }
 
   // Writes the last (maybe incomplete) chunk to the file system.
   if (chunk.size > 0) {
-    files.push(await writeChunk(chunk));
+    files.push(await writeChunk(chunk, compare));
   }
 
-  const heap = createMinHeap<FileLine>(compare);
+  const heap = createMinHeap<FileLine>((a, b) => compare(a.line, b.line));
 
   const readers = files.map((file) =>
     readline.createInterface({
@@ -121,6 +122,7 @@ async function uniq<I extends Readable, S extends Writable>(
   let lastUniqueLine = null;
   while (heap.size > 0) {
     const { line, fileIndex } = heap.pop()!;
+    const heapMem = heap.getHeap()
 
     // This ensure's deduplication
     if (line !== lastUniqueLine) {
@@ -152,26 +154,41 @@ async function getNextLine(rl: readline.Interface) {
   }
 }
 
-async function writeChunk(chunk: Set<string>) {
-  const values = Array.from(chunk).sort();
-  const tmpFile = path.join(tmpdir(), `chunk-${shortId()}.txt`);
-  await fs.promises.writeFile(tmpFile, "\n" + values.join("\n"), "utf-8");
+async function writeChunk(chunk: Set<string>, compare: Compare) {
+  const values = Array.from(chunk).sort(compare);
+  const tmpFile = path.join(__dirname, `chunk-${shortId()}.txt`);
+  await fs.promises.writeFile(tmpFile, values.join(EOL) + EOL, "utf-8");
   return tmpFile;
 }
 
+// Naive parsing, uses record index instead of header name.
+// Works well enough for now though.
 const recordId = (record: string) => {
   const cells = record.split(",");
-  return parseInt(cells[0], 10);
+  const parsed = parseInt(cells[0], 10);
+  return Number.isNaN(parsed) ? null : parsed
 };
 
-const compareLines = (a: FileLine, b: FileLine) => {
+const compareLines = (a: string, b: string) => {
   if (a < b) return -1;
   else if (a > b) return 1;
   else return 0;
 };
 
-const compareRecordIds = (a: FileLine, b: FileLine) =>
-  Math.max(1, Math.min(-1, recordId(b.line) - recordId(a.line))) as Ordering;
+const compareRecordIds = (a: string, b: string) => {
+  const ida = recordId(a)
+  const idb = recordId(b)
+
+  if (ida && idb) {
+    const comparison = Math.max(1, Math.min(-1, idb - ida));
+    return createOrdering(comparison)
+  }
+
+  if (ida) {
+    return idb ? 1 : 0
+  }
+  return idb ? -1 : 0
+}
 
 const getCompare = (file: string) => {
   switch (path.extname(file)) {
@@ -185,8 +202,8 @@ const getCompare = (file: string) => {
 export const main = async (argv: string[]) => {
   const dirname = __dirname;
   const testDir = path.join(dirname, "test-files");
-  const inputFile = "repetition-heavy.csv";
-  const outputFile = "unique.txt";
+  const inputFile = "all-unique.csv";
+  const outputFile = "unique.out.txt";
 
   const testFile = path.join(testDir, inputFile);
   const inputStream = fs.createReadStream(testFile, { encoding: 'utf8' })
@@ -204,7 +221,6 @@ export const main = async (argv: string[]) => {
     getCompare(inputFile)
   );
 
-  outputStream.close();
   const end = performance.now();
   const elapsedTime = end - start;
   console.log("Entire process took %s", formatElapsedTime(elapsedTime));
