@@ -85,6 +85,7 @@ async function uniq<I extends Readable, S extends Writable>(
   const lines = readline.createInterface({ input });
   const chunk = new Set<string>();
   const files = [];
+  const doneQueue = [];
 
   for await (const line of lines) {
     chunk.add(line);
@@ -102,11 +103,11 @@ async function uniq<I extends Readable, S extends Writable>(
 
   const heap = createMinHeap<FileLine>((a, b) => compare(a.line, b.line));
 
-  const readers = files.map((file) =>
-    readline.createInterface({
+  const readers = files.map((file) => {
+    return readline.createInterface({
       input: fs.createReadStream(file),
     })
-  );
+  });
 
   for (let i = 0; i < readers.length; i++) {
     const file = readers[i];
@@ -124,11 +125,11 @@ async function uniq<I extends Readable, S extends Writable>(
     const { line, fileIndex } = heap.pop()!;
 
     // This ensure's deduplication
-    if (line !== lastUniqueLine) {
+    if (lastUniqueLine == null || compare(line, lastUniqueLine) !== 0) {
       output.write(line + EOL);
       lastUniqueLine = line;
     }
-
+  
     const file = readers[fileIndex];
     const nextLine = await getNextLine(file);
     if (nextLine) {
@@ -178,15 +179,11 @@ const compareRecordIds = (a: string, b: string) => {
   const ida = recordId(a)
   const idb = recordId(b)
 
-  if (ida && idb) {
-    const comparison = Math.max(1, Math.min(-1, idb - ida));
-    return createOrdering(comparison)
-  }
+  if (!ida) return -1;
+  else if (!idb) return 1;
 
-  if (ida) {
-    return idb ? 1 : 0
-  }
-  return idb ? -1 : 0
+  const comparison = Math.max(1, Math.min(-1, idb - ida));
+  return createOrdering(comparison)
 }
 
 const getCompare = (file: string) => {
