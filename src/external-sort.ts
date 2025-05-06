@@ -52,9 +52,6 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   return {
     pop,
     push,
-    getHeap() {
-      return heap
-    },
     get size() {
       return heap.length;
     },
@@ -85,7 +82,6 @@ async function uniq<I extends Readable, S extends Writable>(
   const lines = readline.createInterface({ input });
   const chunk = new Set<string>();
   const files = [];
-  const doneQueue = [];
 
   for await (const line of lines) {
     chunk.add(line);
@@ -106,7 +102,7 @@ async function uniq<I extends Readable, S extends Writable>(
   const readers = files.map((file) => {
     return readline.createInterface({
       input: fs.createReadStream(file),
-    })
+    });
   });
 
   for (let i = 0; i < readers.length; i++) {
@@ -120,7 +116,7 @@ async function uniq<I extends Readable, S extends Writable>(
   // Because everything is sorted we just need to compare
   // to previous line, since it can only be less than or equal to nextLine.
   // This allows us to not allocate set, which dramatically improves speed.
-  let lastUniqueLine = null;
+  let lastUniqueLine: string | null = null;
   while (heap.size > 0) {
     const { line, fileIndex } = heap.pop()!;
 
@@ -129,7 +125,7 @@ async function uniq<I extends Readable, S extends Writable>(
       output.write(line + EOL);
       lastUniqueLine = line;
     }
-  
+
     const file = readers[fileIndex];
     const nextLine = await getNextLine(file);
     if (nextLine) {
@@ -166,7 +162,7 @@ async function writeChunk(chunk: Set<string>, compare: Compare) {
 const recordId = (record: string) => {
   const cells = record.split(",");
   const parsed = parseInt(cells[0], 10);
-  return Number.isNaN(parsed) ? null : parsed
+  return Number.isNaN(parsed) ? null : parsed;
 };
 
 const compareLines = (a: string, b: string) => {
@@ -176,22 +172,22 @@ const compareLines = (a: string, b: string) => {
 };
 
 const compareRecordIds = (a: string, b: string) => {
-  const ida = recordId(a)
-  const idb = recordId(b)
+  const ida = recordId(a);
+  const idb = recordId(b);
 
+  if (!idb) return 1;
   if (!ida) return -1;
-  else if (!idb) return 1;
 
-  const comparison = Math.max(1, Math.min(-1, idb - ida));
-  return createOrdering(comparison)
-}
+  const comparison = Math.min(1, Math.max(-1, ida - idb));
+  return createOrdering(comparison);
+};
 
 const getCompare = (file: string) => {
   switch (path.extname(file)) {
     case ".csv":
-      return compareRecordIds
+      return compareRecordIds;
     default:
-      return compareLines
+      return compareLines;
   }
 };
 
@@ -202,8 +198,8 @@ export const main = async (argv: string[]) => {
   const outputFile = "unique.out.txt";
 
   const testFile = path.join(testDir, inputFile);
-  const inputStream = fs.createReadStream(testFile, { encoding: 'utf8' })
-  const outputStream = fs.createWriteStream(outputFile, { encoding: 'utf8' })
+  const inputStream = fs.createReadStream(testFile, { encoding: "utf8" });
+  const outputStream = fs.createWriteStream(outputFile, { encoding: "utf8" });
 
   const start = performance.now();
 
@@ -211,11 +207,7 @@ export const main = async (argv: string[]) => {
     await fs.promises.open(outputFile, "w");
   }
 
-  await uniq(
-    inputStream,
-    outputStream,
-    getCompare(inputFile)
-  );
+  await uniq(inputStream, outputStream, getCompare(inputFile));
 
   const end = performance.now();
   const elapsedTime = end - start;
