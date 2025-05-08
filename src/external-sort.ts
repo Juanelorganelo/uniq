@@ -3,7 +3,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
 import { Readable, Writable } from "node:stream";
-import { formatElapsedTime, shortId } from "./utils";
+import { formatElapsedTime, invariant, shortId } from "./utils";
 import { debug, getScriptName, parseArgv } from "./cli";
 
 const CHUNK_SIZE = 5000;
@@ -22,12 +22,27 @@ export const createOrdering = (value: number): Ordering => {
   }
 };
 
+const isOrdered = <T>(array: T[], compare: (left: T, right: T) => Ordering) => {
+  let i = 0;
+  while (i < array.length - 1) {
+    if (compare(array[i], array[i + 1]) === 1) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
 // This is usually implemented with a binary tree but for simplicity
 // I just did an array impl that maintains the heap invariant
 export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   const heap: T[] = [];
 
   const push = (value: T) => {
+    invariant(
+      isOrdered(heap, compare),
+      `Heap array must be ordered at all times`
+    )
     const elem = heap[heap.length - 1];
 
     if (!elem || compare(elem, value) === -1) {
@@ -37,6 +52,10 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
         const ordering = compare(heap[i], value);
         if (ordering === 1) {
           heap.splice(i, 0, value);
+          invariant(
+            isOrdered(heap, compare),
+            `Heap array must be ordered at all times`
+          )
           return;
         }
       }
@@ -44,10 +63,24 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
       // There wasn't a bigger element so we just add to the beginning.
       heap.unshift(value);
     }
+
+    invariant(
+      isOrdered(heap, compare),
+      `Heap array must be ordered at all times`
+    )
   };
 
   const pop = () => {
-    return heap.shift();
+    invariant(
+      isOrdered(heap, compare),
+      `Heap array must be ordered at all times`
+    )
+    const value = heap.shift();
+    invariant(
+      isOrdered(heap, compare),
+      `Heap array must be ordered at all times`
+    )
+    return value;
   };
 
   return {
@@ -56,6 +89,9 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
     get size() {
       return heap.length;
     },
+    print(toString: (value: T) => string) {
+      return heap.map(toString).join('->');
+    }
   };
 }
 
@@ -75,9 +111,9 @@ const defaultCompare: Compare = (left, right) => {
   }
 };
 
-async function uniq<I extends Readable, S extends Writable>(
+async function uniq<I extends Readable, O extends Writable>(
   input: I,
-  output: S,
+  output: O,
   compare: Compare = defaultCompare
 ) {
   const lines = readline.createInterface({ input });
@@ -100,20 +136,17 @@ async function uniq<I extends Readable, S extends Writable>(
 
   const heap = createMinHeap<FileLine>((a, b) => compare(a.line, b.line));
 
-  const readers = files.map((file) => {
-    return readline.createInterface({
-      input: fs.createReadStream(file),
-    });
-  });
+  const readers = files.map((file) => readline.createInterface(fs.createReadStream(file)));
+  const iterators = readers.map(reader => reader[Symbol.asyncIterator]())
 
   for (let i = 0; i < readers.length; i++) {
-    const file = readers[i];
+    const file = iterators[i];
+    // We don't have empty chunks
     const line = await getNextLine(file);
-    if (line) {
-      heap.push({ line, fileIndex: i });
-    }
+    heap.push({ line: line!, fileIndex: i });
   }
 
+  const done: boolean[] = [];
   // Because everything is sorted we just need to compare
   // to previous line, since it can only be less than or equal to nextLine.
   // This allows us to not allocate set, which dramatically improves speed.
@@ -123,14 +156,18 @@ async function uniq<I extends Readable, S extends Writable>(
 
     // This ensure's deduplication
     if (lastUniqueLine == null || compare(line, lastUniqueLine) !== 0) {
-      output.write(line + EOL);
+      output.write(line + EOL); 
       lastUniqueLine = line;
     }
 
-    const file = readers[fileIndex];
+    const file = iterators[fileIndex];
     const nextLine = await getNextLine(file);
+
     if (nextLine) {
       heap.push({ line: nextLine, fileIndex });
+    } else {
+      done[fileIndex] = true;
+      // await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
@@ -139,16 +176,9 @@ async function uniq<I extends Readable, S extends Writable>(
   }
 }
 
-async function getNextLine(rl: readline.Interface) {
-  const iter = rl[Symbol.asyncIterator]();
-
-  try {
-    const { done, value } = await iter.next();
-    return done ? null : value;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
+async function getNextLine(iter: AsyncIterator<string>) {
+  const { done, value } = await iter.next();
+  return done ? null : value;
 }
 
 async function writeChunk(chunk: Set<string>, compare: Compare) {

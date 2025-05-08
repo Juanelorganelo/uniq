@@ -29,4 +29,21 @@ describe("createMinHeap", () => {
     expect(heap.pop()).toBe(3);
     expect(heap.pop()).toBe(6);
   });
+
+  test("handles equal nodes correctly", () => {
+    const heap = createMinHeap<number>(compareNumber);
+
+    const numbers = [3, 6, 1, -2, 0, -2, -2];
+    for (const number of numbers) {
+      heap.push(number);
+    }
+
+    expect(heap.pop()).toBe(-2);
+    expect(heap.pop()).toBe(-2);
+    expect(heap.pop()).toBe(-2);
+    expect(heap.pop()).toBe(0);
+    expect(heap.pop()).toBe(1);
+    expect(heap.pop()).toBe(3);
+    expect(heap.pop()).toBe(6);
+  });
 });

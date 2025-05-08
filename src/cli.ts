@@ -47,9 +47,9 @@ function isDebug() {
   return process.env.DEBUG === 'true';
 }
 
-export function debug(message: string) {
+export function debug(message: string, ...args: unknown[]) {
   if (isDebug()) {
-    console.log(colorize(message, "magenta"))
+    console.log(colorize(message, "magenta"), ...args)
   }
 }
 
