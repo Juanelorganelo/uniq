@@ -22,17 +22,6 @@ export const createOrdering = (value: number): Ordering => {
   }
 };
 
-const isOrdered = <T>(array: T[], compare: (left: T, right: T) => Ordering) => {
-  let i = 0;
-  while (i < array.length - 1) {
-    if (compare(array[i], array[i + 1]) === 1) {
-      return false;
-    }
-    i++;
-  }
-  return true;
-}
-
 // This is usually implemented with a binary tree but for simplicity
 // I just did an array impl that maintains the heap invariant
 export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
