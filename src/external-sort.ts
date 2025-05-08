@@ -146,7 +146,6 @@ async function uniq<I extends Readable, O extends Writable>(
     heap.push({ line: line!, fileIndex: i });
   }
 
-  const done: boolean[] = [];
   // Because everything is sorted we just need to compare
   // to previous line, since it can only be less than or equal to nextLine.
   // This allows us to not allocate set, which dramatically improves speed.
@@ -165,9 +164,6 @@ async function uniq<I extends Readable, O extends Writable>(
 
     if (nextLine) {
       heap.push({ line: nextLine, fileIndex });
-    } else {
-      done[fileIndex] = true;
-      // await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
