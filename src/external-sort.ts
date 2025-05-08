@@ -146,7 +146,6 @@ async function writeChunk(chunk: Set<string>, compare: Compare) {
   const values = Array.from(chunk).sort(compare);
   const tmpFile = path.join(tmpdir(), `chunk-${shortId()}.txt`);
   await fs.promises.writeFile(tmpFile, values.join(EOL) + EOL, "utf-8");
-  debug(`chunk: ${tmpFile}`);
   return tmpFile;
 }
 
