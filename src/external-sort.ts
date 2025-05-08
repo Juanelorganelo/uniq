@@ -3,7 +3,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { EOL, tmpdir } from "node:os";
 import { Readable, Writable } from "node:stream";
-import { formatElapsedTime, invariant, shortId } from "./utils";
+import { formatElapsedTime, shortId } from "./utils";
 import { debug, getScriptName, parseArgv } from "./cli";
 
 const CHUNK_SIZE = 5000;
@@ -39,10 +39,6 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
   const heap: T[] = [];
 
   const push = (value: T) => {
-    invariant(
-      isOrdered(heap, compare),
-      `Heap array must be ordered at all times`
-    )
     const elem = heap[heap.length - 1];
 
     if (!elem || compare(elem, value) === -1) {
@@ -52,10 +48,6 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
         const ordering = compare(heap[i], value);
         if (ordering === 1) {
           heap.splice(i, 0, value);
-          invariant(
-            isOrdered(heap, compare),
-            `Heap array must be ordered at all times`
-          )
           return;
         }
       }
@@ -63,25 +55,9 @@ export function createMinHeap<T>(compare: (left: T, right: T) => Ordering) {
       // There wasn't a bigger element so we just add to the beginning.
       heap.unshift(value);
     }
-
-    invariant(
-      isOrdered(heap, compare),
-      `Heap array must be ordered at all times`
-    )
   };
 
-  const pop = () => {
-    invariant(
-      isOrdered(heap, compare),
-      `Heap array must be ordered at all times`
-    )
-    const value = heap.shift();
-    invariant(
-      isOrdered(heap, compare),
-      `Heap array must be ordered at all times`
-    )
-    return value;
-  };
+  const pop = () => heap.shift();
 
   return {
     pop,
